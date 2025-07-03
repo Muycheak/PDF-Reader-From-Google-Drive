@@ -40,7 +40,7 @@ root_agent = Agent(
         MCPToolset(
             connection_params=StdioServerParameters(
                 args=[
-                    'tools/google-auth/dist/index.js'
+                    'tools/google-auth/dist/index.js',
                 ],
                 command="node"
             )
