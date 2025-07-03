@@ -1,0 +1,30 @@
+{
+  "name": "pdf-reader-tool",
+  "version": "1.0.0",
+  "description": "A TypeScript tool to read PDF files from URLs and extract text, using @modelcontextprotocol/sdk.",
+  "main": "dist/pdf-reader-tool.js",
+  "scripts": {
+    "build": "tsc src/index.ts --outDir dist",
+    "start": "node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "pdf",
+    "reader",
+    "tool",
+    "typescript",
+    "google-adk",
+    "mcp"
+  ],
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "pdf-parse": "^1.1.1",
+    "@modelcontextprotocol/sdk": "^1.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.7",
+    "@types/node-fetch": "^2.6.1",
+    "@types/pdf-parse": "^1.1.5",
+    "typescript": "^5.8.3"
+  }
+}

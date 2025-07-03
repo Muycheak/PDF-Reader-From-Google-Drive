@@ -1,0 +1,26 @@
+{
+  "name": "google-drive-ts-app",
+  "version": "1.0.0",
+  "description": "TypeScript application to login to Google Drive and list files",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "google-drive",
+    "typescript",
+    "api",
+    "oauth"
+  ],
+  "dependencies": {
+    "googleapis": "^140.0.1",
+    "@modelcontextprotocol/sdk": "^1.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
