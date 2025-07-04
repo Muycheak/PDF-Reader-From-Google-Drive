@@ -36,73 +36,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var node_fetch_1 = require("node-fetch");
-var pdf = require("pdf-parse");
 var types_js_1 = require("@modelcontextprotocol/sdk/types.js");
 var index_js_1 = require("@modelcontextprotocol/sdk/server/index.js");
 var stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
-var CHECK_IN_GUIDE_FROM_URL_TOOL_NAME = "check_in_guide_from_url";
-var CHECK_IN_GUIDE_FROM_URL_TOOL = {
-    name: CHECK_IN_GUIDE_FROM_URL_TOOL_NAME,
-    description: "Get text text of PDF document from a given URL (including Google Drive links, Dropbox links, and other common PDF hosting services) and return it as a string. The URL must be publicly accessible.",
-    inputSchema: {
-        type: "object",
-        properties: {
-            url: {
-                type: "string",
-                description: "The URL of the PDF document to fetch. It can be a direct link to a PDF file or a link to a Google Drive file (e.g., https://drive.google.com/file/d/FILE_ID/view). The file must be publicly accessible."
-            }
-        },
-        required: ["url"]
-    },
-};
-function convertGoogleDriveLinkToDirectDownload(driveUrl) {
-    var regex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/(view|edit|preview)/;
-    var match = driveUrl.match(regex);
-    if (match && match[1]) {
-        var fileId = match[1];
-        return "https://docs.google.com/uc?export=download&id=".concat(fileId);
-    }
-    return driveUrl;
-}
-function getTextPdfFromUrl(params) {
-    return __awaiter(this, void 0, void 0, function () {
-        var pdfUrl, finalPdfUrl, response, arrayBuffer, dataBuffer, data, error_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    _a.trys.push([0, 4, , 5]);
-                    pdfUrl = params.pdfUrl;
-                    finalPdfUrl = pdfUrl;
-                    if (pdfUrl.includes('drive.google.com')) {
-                        finalPdfUrl = convertGoogleDriveLinkToDirectDownload(pdfUrl);
-                        if (finalPdfUrl === pdfUrl) {
-                            console.warn("Warning: Could not convert Google Drive sharing link to direct download. Make sure the file is publicly accessible and the link format is correct (e.g., .../file/d/FILE_ID/view). Attempting to fetch the original URL.");
-                        }
-                    }
-                    return [4 /*yield*/, (0, node_fetch_1.default)(finalPdfUrl)];
-                case 1:
-                    response = _a.sent();
-                    if (!response.ok) {
-                        throw new Error("Failed to fetch PDF from ".concat(finalPdfUrl, ": ").concat(response.statusText, " (Status: ").concat(response.status, ")"));
-                    }
-                    return [4 /*yield*/, response.arrayBuffer()];
-                case 2:
-                    arrayBuffer = _a.sent();
-                    dataBuffer = Buffer.from(arrayBuffer);
-                    return [4 /*yield*/, pdf(dataBuffer)];
-                case 3:
-                    data = _a.sent();
-                    return [2 /*return*/, data.text];
-                case 4:
-                    error_1 = _a.sent();
-                    console.error("Error fetching text of PDF from URL: ".concat(error_1.message));
-                    throw error_1;
-                case 5: return [2 /*return*/];
-            }
-        });
-    });
-}
+var pdfUrl = require("./pdf.url.js");
 var server = new index_js_1.Server({
     name: "pdf_url_mcp_server",
     version: "1.0.0"
@@ -114,33 +51,39 @@ var server = new index_js_1.Server({
 server.setRequestHandler(types_js_1.ListToolsRequestSchema, function () { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         return [2 /*return*/, ({
-                tools: [CHECK_IN_GUIDE_FROM_URL_TOOL]
+                tools: [pdfUrl.GET_TEXT_FROM_URL_TOOL]
             })];
     });
 }); });
 server.setRequestHandler(types_js_1.CallToolRequestSchema, function (request) { return __awaiter(void 0, void 0, void 0, function () {
-    var text, error_2;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
+    var _a, error_1;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
             case 0:
-                _a.trys.push([0, 4, , 5]);
-                if (!(request.params.name !== CHECK_IN_GUIDE_FROM_URL_TOOL_NAME)) return [3 /*break*/, 1];
-                throw new types_js_1.McpError(types_js_1.ErrorCode.MethodNotFound, "Unknown tool: ".concat(request.params.name));
-            case 1: return [4 /*yield*/, getTextPdfFromUrl(request.params.arguments)];
-            case 2:
-                text = _a.sent();
-                return [2 /*return*/, { text: text }];
-            case 3: return [3 /*break*/, 5];
-            case 4:
-                error_2 = _a.sent();
+                _b.trys.push([0, 5, , 6]);
+                _a = request.params.name;
+                switch (_a) {
+                    case pdfUrl.GET_TEXT_FROM_URL_TOOL_NAME: return [3 /*break*/, 1];
+                }
+                return [3 /*break*/, 3];
+            case 1: return [4 /*yield*/, pdfUrl.getTextPdfFromUrl(request.params.arguments)];
+            case 2: return [2 /*return*/, _b.sent()];
+            case 3:
+                {
+                    throw new types_js_1.McpError(types_js_1.ErrorCode.MethodNotFound, "Unknown tool: ".concat(request.params.name));
+                }
+                _b.label = 4;
+            case 4: return [3 /*break*/, 6];
+            case 5:
+                error_1 = _b.sent();
                 return [2 /*return*/, {
                         content: [{
                                 type: "text",
-                                text: "Error: ".concat(error_2 instanceof Error ? error_2.message : String(error_2))
+                                text: error_1 instanceof Error ? error_1.message : "An unknown error occurred."
                             }],
-                        isError: true
+                        isError: false
                     }];
-            case 5: return [2 /*return*/];
+            case 6: return [2 /*return*/];
         }
     });
 }); });
@@ -164,3 +107,23 @@ runServer().catch(function (error) {
     console.error("Fatal error running server:", error);
     process.exit(1);
 });
+// function convertGoogleDriveLinkToDirectDownload() {
+//     const url = "https://drive.google.com/file/d/1fbvJORDR-x0aJqKWakfFIC5hhQCYQhxT/view?usp=sharing";
+//     try {
+//         const result = pdfUrl.convertGoogleDriveLinkToDirectDownload(url);
+//         console.log(result);
+//     } catch (error) {
+//         console.log(error);
+//     }
+// }
+function readPdfContentFromUrl() {
+    var url = "https://drive.google.com/file/d/1fbvJORDR-x0aJqKWakfFIC5hhQCYQhxT/view?usp=sharing";
+    try {
+        var result = pdfUrl.readPdfContentFromUrl(url);
+        console.log(result);
+    }
+    catch (error) {
+        console.log(error);
+    }
+}
+readPdfContentFromUrl();

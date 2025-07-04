@@ -17,9 +17,10 @@
     "mcp"
   ],
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.0",
     "node-fetch": "^2.6.7",
     "pdf-parse": "^1.1.1",
-    "@modelcontextprotocol/sdk": "^1.13.0"
+    "pdfjs-dist": "^5.3.31"
   },
   "devDependencies": {
     "@types/node": "^16.11.7",

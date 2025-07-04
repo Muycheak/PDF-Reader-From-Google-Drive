@@ -34,14 +34,14 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const googleAuth = __importStar(require("./google.auth.js"));
-const listDrive = __importStar(require("./list.drive.js"));
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
 const index_js_1 = require("@modelcontextprotocol/sdk/server/index.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const ALL_TOOLS = [
     googleAuth.GET_AUTH_URL_TOOL,
     googleAuth.GET_NEW_TOKEN_TOOL,
-    listDrive.LIST_FILES_TOOL
+    googleAuth.LIST_FILES_TOOL,
+    googleAuth.CHECK_LOGGED_IN_TOOL
 ];
 const server = new index_js_1.Server({
     name: "pdf_url_mcp_server",
@@ -58,67 +58,16 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
     try {
         switch (request.params.name) {
             case googleAuth.GET_NEW_TOKEN_TOOL_NAME: {
-                await googleAuth.getNewToken(request.params.arguments);
-                if (!googleAuth.oAuth2Client.credentials.access_token) {
-                    return {
-                        isError: true,
-                        content: [{
-                                type: "String",
-                                data: "Failed to retrieve access token. Please ensure you have authenticated successfully."
-                            }]
-                    };
-                }
-                else {
-                    return {
-                        isError: false,
-                        content: [{
-                                type: "String",
-                                data: "Successfully authenticated with Google. You can now use other tools."
-                            }]
-                    };
-                }
+                return await googleAuth.getNewToken(request.params.arguments);
             }
             case googleAuth.GET_AUTH_URL_TOOL_NAME: {
-                const url = googleAuth.getAuthUrl();
-                if (!url) {
-                    return {
-                        isError: true,
-                        content: [{
-                                type: "String",
-                                data: "Failed to generate authentication URL."
-                            }]
-                    };
-                }
-                else {
-                    return {
-                        isError: false,
-                        content: [{
-                                type: "String",
-                                data: `Please visit the following URL to authenticate with Google: ${url}`
-                            }]
-                    };
-                }
+                return googleAuth.getAuthUrl();
             }
-            case listDrive.LIST_FILES_TOOL_NAME: {
-                const result = await listDrive.listDriveFiles();
-                if (result === undefined || result.length === 0) {
-                    return {
-                        isError: true,
-                        content: [{
-                                type: "String",
-                                data: "Failed to list files."
-                            }]
-                    };
-                }
-                else {
-                    return {
-                        isError: false,
-                        content: [{
-                                type: "String",
-                                data: JSON.stringify(result, null, 2)
-                            }]
-                    };
-                }
+            case googleAuth.LIST_FILES_TOOL_NAME: {
+                return await googleAuth.listDriveFiles();
+            }
+            case googleAuth.CHECK_LOGGED_IN_TOOL_NAME: {
+                return await googleAuth.authorize();
             }
             default:
                 throw new types_js_1.McpError(types_js_1.ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
@@ -127,10 +76,10 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
     catch (error) {
         return {
             content: [{
-                    type: "String",
-                    data: `Error: ${error instanceof Error ? error.message : String(error)}`
+                    type: "text",
+                    text: error instanceof Error ? error.message : "An unknown error occurred."
                 }],
-            isError: true
+            isError: false
         };
     }
 });

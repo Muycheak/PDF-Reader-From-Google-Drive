@@ -33,19 +33,31 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GET_NEW_TOKEN_TOOL_NAME = exports.GET_NEW_TOKEN_TOOL = exports.GET_AUTH_URL_TOOL_NAME = exports.GET_AUTH_URL_TOOL = exports.oAuth2Client = void 0;
+exports.GET_NEW_TOKEN_TOOL_NAME = exports.GET_NEW_TOKEN_TOOL = exports.GET_AUTH_URL_TOOL_NAME = exports.GET_AUTH_URL_TOOL = exports.LIST_FILES_TOOL_NAME = exports.LIST_FILES_TOOL = exports.CHECK_LOGGED_IN_TOOL_NAME = exports.CHECK_LOGGED_IN_TOOL = void 0;
 exports.authorize = authorize;
 exports.getAuthUrl = getAuthUrl;
 exports.getNewToken = getNewToken;
+exports.listDriveFiles = listDriveFiles;
 const googleapis_1 = require("googleapis");
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
-const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
+const Response = __importStar(require("./response.util.js"));
 const CLIENT_ID = "1052983976035-rv3n4504uat6tn3vvrvi9av43tc6sik9.apps.googleusercontent.com";
 const CLIENT_SECRET = "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";
 // Using 'oob' (out-of-band) for a CLI app is simpler.
 // Google will display the auth code on a page for you to copy.
 const REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+const CHECK_LOGGED_IN_TOOL_NAME = "check_logged_in";
+exports.CHECK_LOGGED_IN_TOOL_NAME = CHECK_LOGGED_IN_TOOL_NAME;
+const CHECK_LOGGED_IN_TOOL = {
+    name: CHECK_LOGGED_IN_TOOL_NAME,
+    description: "Check if the user is logged in",
+    inputSchema: {
+        type: "object",
+        properties: {}
+    }
+};
+exports.CHECK_LOGGED_IN_TOOL = CHECK_LOGGED_IN_TOOL;
 const GET_AUTH_URL_TOOL_NAME = "get_google_auth_url";
 exports.GET_AUTH_URL_TOOL_NAME = GET_AUTH_URL_TOOL_NAME;
 const GET_AUTH_URL_TOOL = {
@@ -71,10 +83,19 @@ const GET_NEW_TOKEN_TOOL = {
     }
 };
 exports.GET_NEW_TOKEN_TOOL = GET_NEW_TOKEN_TOOL;
+const LIST_FILES_TOOL_NAME = "list_google_drive_files";
+exports.LIST_FILES_TOOL_NAME = LIST_FILES_TOOL_NAME;
+const LIST_FILES_TOOL = {
+    name: LIST_FILES_TOOL_NAME,
+    description: "List files in the user's Google Drive. This tool requires authentication with Google Drive and returns a list of files in the user's Google Drive account. It can be used after successful authentication.",
+    inputSchema: {
+        type: "object",
+    }
+};
+exports.LIST_FILES_TOOL = LIST_FILES_TOOL;
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 const oAuth2Client = new googleapis_1.google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-exports.oAuth2Client = oAuth2Client;
 oAuth2Client.on('tokens', (tokens) => {
     if (tokens.refresh_token) {
         console.log('New refresh token received, saving to token.json');
@@ -84,32 +105,95 @@ oAuth2Client.on('tokens', (tokens) => {
     fs_1.promises.writeFile(TOKEN_PATH, JSON.stringify(newCredentials)).catch(err => console.error('Error writing new token:', err));
 });
 async function authorize() {
+    let returnRes = Response.initializeResponse();
     // If the client has credentials in memory, we can assume it's authorized.
     if (oAuth2Client.credentials && oAuth2Client.credentials.access_token) {
-        return oAuth2Client;
+        Response.pushText(returnRes, "Already authenticated with Google. You can now use other tools.");
     }
     try {
         const token = await fs_1.promises.readFile(TOKEN_PATH, 'utf-8');
         const credentials = JSON.parse(token);
         oAuth2Client.setCredentials(credentials);
-        return oAuth2Client;
+        Response.pushText(returnRes, "Already authenticated with Google. You can now use other tools.");
     }
     catch (err) {
-        // If no token, or token is invalid, throw an error that the agent can handle.
-        throw new types_js_1.McpError(types_js_1.ErrorCode.InternalError, "Not authenticated. Please run the 'google_auth' tool to authenticate.");
+        Response.pushText(returnRes, "Not authenticated. Please run the 'google_auth' tool to authenticate.");
     }
+    Response.setResponse(returnRes, false, "");
+    return returnRes;
 }
-function getAuthUrl() {
-    return oAuth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: SCOPES,
-    });
+async function getAuthUrl() {
+    let returnRes = Response.initializeResponse();
+    await authorize();
+    if (oAuth2Client.credentials.access_token) {
+        Response.pushText(returnRes, "Already authenticated with Google. You can now use other tools.");
+    }
+    else {
+        try {
+            const url = oAuth2Client.generateAuthUrl({
+                access_type: 'offline',
+                scope: SCOPES,
+            });
+            if (url) {
+                Response.pushText(returnRes, `Please visit the following URL to authenticate with Google: ${url}`);
+            }
+            else {
+                Response.pushText(returnRes, "Failed to generate authentication URL.");
+            }
+        }
+        catch (error) {
+            Response.pushText(returnRes, "Failed to generate authentication URL.");
+        }
+    }
+    Response.setResponse(returnRes, false, "");
+    return returnRes;
 }
 async function getNewToken(params) {
     const { code } = params;
-    const { tokens } = await oAuth2Client.getToken(code);
-    oAuth2Client.setCredentials(tokens);
-    // The 'tokens' event listener will handle saving the token.
-    console.log('Token stored to', TOKEN_PATH);
-    return oAuth2Client;
+    let returnRes = Response.initializeResponse();
+    try {
+        const { tokens } = await oAuth2Client.getToken(code);
+        oAuth2Client.setCredentials(tokens);
+        if (oAuth2Client.credentials.access_token) {
+            Response.pushText(returnRes, "Successfully authenticated with Google. You can now use other tools.");
+        }
+        else {
+            Response.pushText(returnRes, "Failed to retrieve access token. Please ensure you have authenticated successfully.");
+        }
+    }
+    catch (error) {
+        Response.pushText(returnRes, "Failed to retrieve access token. Please ensure you have authenticated successfully.");
+    }
+    Response.setResponse(returnRes, false, "");
+    return returnRes;
+}
+async function listDriveFiles() {
+    let returnRes = Response.initializeResponse();
+    try {
+        await authorize();
+        const drive = googleapis_1.google.drive({ version: 'v3', auth: oAuth2Client });
+        console.log('Successfully authenticated with Google Drive. Fetching files...');
+        const res = await drive.files.list({
+            pageSize: 20,
+            fields: 'nextPageToken, files(id, name, mimeType, modifiedTime)',
+            orderBy: 'modifiedTime desc',
+        });
+        const files = res.data.files;
+        if (files && files.length > 0) {
+            console.log('Files:');
+            files.forEach((file) => {
+                const modifiedDate = file.modifiedTime ? new Date(file.modifiedTime).toLocaleDateString() : 'N/A';
+                console.log(`- ${file.name} (${file.id}) | ${file.mimeType} | Last Modified: ${modifiedDate}`);
+            });
+            Response.pushJson(returnRes, files);
+        }
+        else {
+            Response.pushText(returnRes, "No files found.");
+        }
+    }
+    catch (error) {
+        Response.pushText(returnRes, "Failed to list files.");
+    }
+    Response.setResponse(returnRes, false, "");
+    return returnRes;
 }

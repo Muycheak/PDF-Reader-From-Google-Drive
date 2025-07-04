@@ -1,5 +1,4 @@
 import * as googleAuth from './google.auth.js';
-import * as listDrive from './list.drive.js';
 
 import {
     CallToolRequestSchema,
@@ -15,7 +14,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 const ALL_TOOLS = [
     googleAuth.GET_AUTH_URL_TOOL,
     googleAuth.GET_NEW_TOKEN_TOOL,
-    listDrive.LIST_FILES_TOOL
+    googleAuth.LIST_FILES_TOOL,
+    googleAuth.CHECK_LOGGED_IN_TOOL
 ] as const;
 
 const server = new Server({
@@ -37,65 +37,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
         switch (request.params.name) {
             case googleAuth.GET_NEW_TOKEN_TOOL_NAME: {
-                await googleAuth.getNewToken(request.params.arguments);
-                if (!googleAuth.oAuth2Client.credentials.access_token) {
-                    return {
-                        isError: true,
-                        content: [{
-                            type: "String",
-                            data: "Failed to retrieve access token. Please ensure you have authenticated successfully."
-                        }]
-                    };
-                } else {
-                    return {
-                        isError: false,
-                        content: [{
-                            type: "String",
-                            data: "Successfully authenticated with Google. You can now use other tools."
-                        }]
-                    };
-                }
+                return await googleAuth.getNewToken(request.params.arguments);
             }
             case googleAuth.GET_AUTH_URL_TOOL_NAME: {
-                const url = googleAuth.getAuthUrl();
-                if (!url) {
-                    return {
-                        isError: true,
-                        content: [{
-                            type: "String",
-                            data: "Failed to generate authentication URL."
-                        }]
-                    };
-                } else {
-                    return {
-                        isError: false,
-                        content: [{
-                            type: "String",
-                            data: `Please visit the following URL to authenticate with Google: ${url}`
-                        }]
-                    };
-                }
+                return googleAuth.getAuthUrl();
             }
-            case listDrive.LIST_FILES_TOOL_NAME: {
-                const result = await listDrive.listDriveFiles();
-                if (result === undefined || result.length === 0) {
-                    return {
-                        isError: true,
-                        content: [{
-                            type: "String",
-                            data: "Failed to list files."
-                        }]
-                    };
-                }
-                else {
-                    return {
-                        isError: false,
-                        content: [{
-                            type: "String",
-                            data: JSON.stringify(result, null, 2)
-                        }]
-                    };
-                }
+            case googleAuth.LIST_FILES_TOOL_NAME: {
+                return await googleAuth.listDriveFiles();
+
+            }
+            case googleAuth.CHECK_LOGGED_IN_TOOL_NAME: {
+                return await googleAuth.authorize();
             }
             default:
                 throw new McpError(
@@ -106,10 +58,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     } catch (error) {
         return {
             content: [{
-                type: "String",
-                data: `Error: ${error instanceof Error ? error.message : String(error)}`
+                type: "text",
+                text: error instanceof Error ? error.message : "An unknown error occurred."
             }],
-            isError: true
+            isError: false
         };
     }
 });
@@ -120,7 +72,7 @@ async function runServer() {
     await server.connect(transport);
     console.error("Airxpress MCP Server running on stdio");
 }
-  
+
 runServer().catch((error) => {
     console.error("Fatal error running server:", error);
     process.exit(1);
