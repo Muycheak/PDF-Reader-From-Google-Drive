@@ -11,9 +11,9 @@ interface PdfContent {
 }
 
 
-const GET_TEXT_FROM_URL_TOOL_NAME = "get_text_from_url";
-const GET_TEXT_FROM_URL_TOOL: Tool = {
-    name: GET_TEXT_FROM_URL_TOOL_NAME,
+const GET_CONTENT_FROM_URL_TOOL_NAME = "get_text_from_url";
+const GET_CONTENT_FROM_URL_TOOL: Tool = {
+    name: GET_CONTENT_FROM_URL_TOOL_NAME,
     description: "Extracts text from a PDF document from a given URL. It can handle both direct links to PDF files and Google Drive sharing URLs (e.g., https://drive.google.com/file/d/...).",
     inputSchema: {
         type: "object",
@@ -25,7 +25,7 @@ const GET_TEXT_FROM_URL_TOOL: Tool = {
 };
 
 
-async function getTextPdfFromUrl(params: any) {
+async function fetchContentFromPdfUrl(params: any) {
     const { url } = params;
     let returnRes = Response.initializeResponse();
 
@@ -152,8 +152,7 @@ async function readPdfContentFromUrl(pdfUrl: string): Promise<PdfContent[]> {
 }
 
 export {
-    readPdfContentFromUrl,
-    getTextPdfFromUrl,
-    GET_TEXT_FROM_URL_TOOL_NAME,
-    GET_TEXT_FROM_URL_TOOL,
+    fetchContentFromPdfUrl,
+    GET_CONTENT_FROM_URL_TOOL_NAME,
+    GET_CONTENT_FROM_URL_TOOL,
 }
